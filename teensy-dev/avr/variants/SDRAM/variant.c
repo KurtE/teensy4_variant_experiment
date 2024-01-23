@@ -202,6 +202,15 @@ struct smalloc_pool sdram_smalloc_pool;
 }
 #endif
 
+// default = 166MHz
+#define SDRAM_CLOCK 133
+// default base address
+#define SDRAM_BASE 0x80000000
+// default SDRAM size (in MBs)
+#define SDRAM_SIZE 32
+// Dev board with no capacitor on pin EMC_39
+#define SDRAM_NOCAP 1
+
 uint8_t _size = 0;
     
 unsigned int ns_to_clocks(float ns, float freq)
@@ -483,7 +492,7 @@ bool begin(uint8_t external_sdram_size, uint8_t clock, uint8_t NOCAP)
     SEMC_MCR &= ~SEMC_MCR_MDIS;
 
     // configure SDRAM parameters
-    SEMC_BR0 = 0x80000000 | SEMC_BR_MS(13 /*13 = 32 Mbyte*/) | SEMC_BR_VLD;
+    SEMC_BR0 = SDRAM_BASE | SEMC_BR_MS(13 /*13 = 32 Mbyte*/) | SEMC_BR_VLD;
     SEMC_SDRAMCR0 = SEMC_SDRAMCR0_CL(3) |
         SEMC_SDRAMCR0_COL(3) |  // 3 = 9 bit column
         SEMC_SDRAMCR0_BL(3) |   // 3 = 8 word burst length
@@ -528,24 +537,24 @@ bool begin(uint8_t external_sdram_size, uint8_t clock, uint8_t NOCAP)
     //  precharge all
     //  auto refresh (NXP SDK sends this twice, why?)
     //  mode set
-    bool result_cmd = SendIPCommand(0x80000000, 0x0f, 0, NULL);  //Prechargeall
+    bool result_cmd = SendIPCommand(SDRAM_BASE, 0x0f, 0, NULL);  //Prechargeall
     if (result_cmd != true)
     {
         return result_cmd;
     }
-    result_cmd = SendIPCommand(0x80000000, 0x0c, 0, NULL);        //AutoRefresh
+    result_cmd = SendIPCommand(SDRAM_BASE, 0x0c, 0, NULL);        //AutoRefresh
     if (result_cmd != true)
     {
         return result_cmd;
     }
-    result_cmd = SendIPCommand(0x80000000, 0x0c, 0, NULL);         //AutoRefresh
+    result_cmd = SendIPCommand(SDRAM_BASE, 0x0c, 0, NULL);         //AutoRefresh
     if (result_cmd != true)
     {
         return result_cmd;
     }
     /* Mode setting value. */
     uint16_t mode = (uint16_t)3| (uint16_t)(3 << 4);
-    result_cmd = SendIPCommand(0x80000000, 0x0a, mode, NULL);       //Modeset
+    result_cmd = SendIPCommand(SDRAM_BASE, 0x0a, mode, NULL);       //Modeset
     if (result_cmd != true)
     {
         return result_cmd;
@@ -555,7 +564,7 @@ bool begin(uint8_t external_sdram_size, uint8_t clock, uint8_t NOCAP)
 
     if(result_cmd == false) return false;
     
-    sm_set_pool(&sdram_smalloc_pool, (void *)0x80000000, external_sdram_size * 1024 *1024, 1, NULL);
+    sm_set_pool(&sdram_smalloc_pool, (void *)SDRAM_BASE, external_sdram_size * 1024 *1024, 1, NULL);
 
     if(!check_fixed_pattern(0x5A698421))
         return false;
@@ -563,7 +572,6 @@ bool begin(uint8_t external_sdram_size, uint8_t clock, uint8_t NOCAP)
 
     return true; // hopefully SDRAM now working at 80000000 to 81FFFFFF
 }
-
 
 void startup_middle_hook(void)
 {
