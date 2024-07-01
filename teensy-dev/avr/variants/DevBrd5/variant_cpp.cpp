@@ -56,11 +56,11 @@ extern const pin_to_xbar_info_t PROGMEM pin_to_xbar_info[] = {
 	{39,  9, 3, &IOMUXC_XBAR1_IN09_SELECT_INPUT, 0x1},
 	// Added ones here
 	{46,  10, 1, nullptr, 0x0},
-	{47,  12, 1, nullptr, 0x0},
-	{48,  13, 1, nullptr, 0x0},
-	{49,  16, 1, nullptr, 0x0},
-	{50,  17, 1, nullptr, 0x0},
-	{63,  11, 1, nullptr, 0x0},
+	{47,  11, 1, nullptr, 0x0},
+	{48,  12, 1, nullptr, 0x0},
+	{49,  13, 1, nullptr, 0x0},
+	{50,  16, 1, nullptr, 0x0},
+	{51,  17, 1, nullptr, 0x0},
 	{68,  24, 1, &IOMUXC_XBAR1_IN24_SELECT_INPUT, 0x1},
 	{69,  25, 1, &IOMUXC_XBAR1_IN25_SELECT_INPUT, 0x0},
 
