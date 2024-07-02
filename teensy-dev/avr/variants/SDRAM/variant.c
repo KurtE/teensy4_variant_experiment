@@ -575,7 +575,8 @@ bool begin(uint8_t external_sdram_size, uint8_t clock, uint8_t NOCAP)
 
 void startup_middle_hook(void)
 {
-    begin(32, 166, 1);
+    begin(SDRAM_SIZE, SDRAM_CLOCK, SDRAM_USEDQS);
+
 }
 
 #include <stdlib.h>
