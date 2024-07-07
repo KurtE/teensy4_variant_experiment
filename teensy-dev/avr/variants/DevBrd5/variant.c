@@ -1,4 +1,3 @@
-begin(SDRAM_SIZE, SDRAM_CLOCK, SDRAM_USEDQS);
 /* Teensyduino Core Library
  * http://www.pjrc.com/teensy/
  * Copyright (c) 2018 PJRC.COM, LLC.
