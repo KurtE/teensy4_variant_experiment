@@ -1,4 +1,3 @@
-begin(SDRAM_SIZE, SDRAM_CLOCK, SDRAM_USEDQS);
 /* Teensyduino Core Library
  * http://www.pjrc.com/teensy/
  * Copyright (c) 2018 PJRC.COM, LLC.
@@ -217,7 +216,7 @@ struct smalloc_pool sdram_smalloc_pool;
 // default SDRAM size (in MBs)
 #define SDRAM_SIZE 32
 // Dev board with no capacitor on pin EMC_39
-#define SDRAM_NOCAP 1
+#define SDRAM_USEDQS 1
 
 uint8_t _size = 0;
     
@@ -491,7 +490,7 @@ bool  check_fixed_pattern(uint32_t pattern)
 	return true;
 }
 
-bool begin(uint8_t external_sdram_size, uint8_t clock, uint8_t NOCAP)
+bool begin(uint8_t external_sdram_size, uint8_t clock, uint8_t useDQS)
 {
     _size = external_sdram_size;
     uint8_t _clock = 0;
@@ -563,7 +562,7 @@ bool begin(uint8_t external_sdram_size, uint8_t clock, uint8_t NOCAP)
 	}
     configure_sdram_pins();
 
-    if(NOCAP == 1) {
+    if(useDQS == 1) {
         SEMC_MCR |= SEMC_MCR_MDIS | SEMC_MCR_CTO(0xFF) | SEMC_MCR_BTO(0x1F) | SEMC_MCR_DQSMD;
     } else  { // enable SEMC_MCR_DQSMD (EMC_39
         SEMC_MCR |= SEMC_MCR_MDIS | SEMC_MCR_CTO(0xFF) | SEMC_MCR_BTO(0x1F);
