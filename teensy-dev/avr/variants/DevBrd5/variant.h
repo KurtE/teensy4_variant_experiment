@@ -895,7 +895,6 @@ void *sdram_realloc(void *ptr, size_t size);
 #define SERIAL2_LPUART   IRQ_LPUART3, CCM_CCGR0, CCM_CCGR0_LPUART3(CCM_CCGR_ON), XBARA1_OUT_LPUART3_TRG_INPUT
 #define SERIAL2_RX_PINS  {{16,2, &IOMUXC_LPUART3_RX_SELECT_INPUT, 0}, {45, 3, &IOMUXC_LPUART3_RX_SELECT_INPUT, 2}}
 #define SERIAL2_TX_PINS  {{17,2, &IOMUXC_LPUART3_TX_SELECT_INPUT, 0}, {44, 3, &IOMUXC_LPUART3_TX_SELECT_INPUT, 2}}
-#endif
 
 // Serial7 The default pins on MMOD are EMC pins, but we added Serial 5 pins, used as Serial8 on T4.1...
 #define SERIAL7_UART_ADDR IMXRT_LPUART5_ADDRESS
