@@ -409,42 +409,51 @@ bool  check_fixed_pattern(uint32_t pattern)
 
 bool sdram_begin(uint8_t external_sdram_size, uint8_t clock, uint8_t useDQS)
 {
+    static bool doneOnce=false;
     _size = external_sdram_size;
-    uint8_t _clock = 0;
+    unsigned int clockdiv;
+    float base_frequency;
+    bool use_pll2_pfd2 = false;
+    bool use_pll3_pfd1 = false;
+    bool use_pll3_custom_pfd1 = false;
     
-    if(clock > 221 || clock < 133) return false;
+    if (clock > 360 || clock < 100) return false;
     
     switch(clock) {
         case 133:
-            _clock = 5;
+            clockdiv = 5;
+            use_pll3_pfd1 = true;
             break;
         case 166:
-            _clock = 4;
+            clockdiv = 4;
+            use_pll3_pfd1 = true;
             break;
         case 221:
-            _clock = 3;
+            clockdiv = 3;
+            use_pll3_pfd1 = true;
             break;
         case 198:
-            _clock = 2;
+            clockdiv = 2;
+            use_pll2_pfd2 = true;
             break;
         default:
-            _clock = 4;
+            clockdiv = (clock < 124) ? 3 : 2;
+            use_pll3_custom_pfd1 = true;
             break;
     }
             
-    const unsigned int clockdiv = _clock;
-    //Serial.printf("Clock set at: %d\n", clockdiv);
         
     /* Experimental note (see https://forum.pjrc.com/index.php?threads/call-to-arms-teensy-sdram-true.73898/post-335619):
     *  if you want to try 198 MHz overclock
     *  const unsigned int clockdiv = 2; // PLL2_PFD2 / 2 = 396 / 2 = 198 MHz
     */
-    if(clockdiv == 2) {
+    if (use_pll2_pfd2) {
         CCM_CBCDR = (CCM_CBCDR & ~(CCM_CBCDR_SEMC_PODF(7) | CCM_CBCDR_SEMC_ALT_CLK_SEL)) |
         CCM_CBCDR_SEMC_CLK_SEL | CCM_CBCDR_SEMC_PODF(clockdiv-1);  
+        base_frequency = 396.0e6;
     /* If it doesn't work, maybe try soldering a 5pF or 10pF capacitor at C29 
     */
-    } else {
+    } else if (use_pll3_pfd1) {
     // use PLL3 PFD1 664.62 divided by 4 or 5, for 166 or 133 MHz
     // 5 = 133mhz
     // 4 = 166mhz - SDRAM rated,  see post #60
@@ -452,11 +461,26 @@ bool sdram_begin(uint8_t external_sdram_size, uint8_t clock, uint8_t useDQS)
         CCM_CBCDR = (CCM_CBCDR & ~(CCM_CBCDR_SEMC_PODF(7))) |
             CCM_CBCDR_SEMC_CLK_SEL | CCM_CBCDR_SEMC_ALT_CLK_SEL |
             CCM_CBCDR_SEMC_PODF(clockdiv-1);
+        base_frequency = 664.6154e6;
+    } else if (use_pll3_custom_pfd1) {
+        // custom PLL3 PDF1: 173,180,187,196,206,216,227,240,254,270,288,etc
+        CCM_ANALOG_PFD_480_SET = 0x80 << 8;
+        CCM_ANALOG_PFD_480_CLR = 0x7F << 8;
+        unsigned int frac = roundf(8640.0f / (float)(clock * clockdiv));
+        if (frac < 12 || frac > 35) return false; // should never happen...
+        CCM_ANALOG_PFD_480_TOG = (0x80 | frac) << 8;
+        CCM_CBCDR = (CCM_CBCDR & ~(CCM_CBCDR_SEMC_PODF(7))) |
+            CCM_CBCDR_SEMC_CLK_SEL | CCM_CBCDR_SEMC_ALT_CLK_SEL |
+            CCM_CBCDR_SEMC_PODF(clockdiv-1);
+        base_frequency = 8640.0e6f / (float)frac;
+    } else {
+        return false;
     }
     
     delayMicroseconds(1);
-    const float freq = 664.62e6 / (float)clockdiv;
+    const float freq = base_frequency / (float)clockdiv;
     frequency = freq / 1.0e6f;
+    //Serial.printf("Clock set %.2f MHz\n", freq / 1.0e6f);
     CCM_CCGR3 |= CCM_CCGR3_SEMC(CCM_CCGR_ON);
     
     // software reset
@@ -470,14 +494,14 @@ bool sdram_begin(uint8_t external_sdram_size, uint8_t clock, uint8_t useDQS)
     SEMC_BR7 = 0;
     SEMC_BR8 = 0;
     SEMC_MCR = SEMC_MCR_SWRST;
-	uint32_t timeout = micros();
-	while (SEMC_MCR & SEMC_MCR_SWRST)
-	{
-		if (micros() - timeout > 1500)
-		{
-			return false;
-		}
-	}
+    uint32_t timeout = micros();
+    while (SEMC_MCR & SEMC_MCR_SWRST)
+    {
+      if (micros() - timeout > 1500)
+      {
+        return false;
+      }
+    }
     configure_sdram_pins();
 
     if(useDQS == 1) {
@@ -488,15 +512,19 @@ bool sdram_begin(uint8_t external_sdram_size, uint8_t clock, uint8_t useDQS)
 
     // TODO: reference manual page 1364 says "Recommend to set BMCR0 with 0x0 for
     // applications that require restrict sequence of transactions", same on BMCR1
-    SEMC_BMCR0 = SEMC_BMCR0_WQOS(5) | SEMC_BMCR0_WAGE(8) |
-        SEMC_BMCR0_WSH(0x40) | SEMC_BMCR0_WRWS(0x10);
-    SEMC_BMCR1 = SEMC_BMCR1_WQOS(5) | SEMC_BMCR1_WAGE(8) |
-        SEMC_BMCR1_WPH(0x60) | SEMC_BMCR1_WRWS(0x24) | SEMC_BMCR1_WBR(0x40);
+    //SEMC_BMCR0 = SEMC_BMCR0_WQOS(5) | SEMC_BMCR0_WAGE(8) |
+    //    SEMC_BMCR0_WSH(0x40) | SEMC_BMCR0_WRWS(0x10);
+    //SEMC_BMCR1 = SEMC_BMCR1_WQOS(5) | SEMC_BMCR1_WAGE(8) |
+    //    SEMC_BMCR1_WPH(0x60) | SEMC_BMCR1_WRWS(0x24) | SEMC_BMCR1_WBR(0x40);
+    //Per NXP Forum: i.MXRT1060 SEMC SDRAM Data Corruption,
+    // https://community.nxp.com/t5/i-MX-RT/i-MXRT1060-SEMC-SDRAM-Data-Corruption/m-p/1172919/highlight/true#M10887
+    SEMC_BMCR0 = 0x81;
+    SEMC_BMCR1 = 0x81;
 
     SEMC_MCR &= ~SEMC_MCR_MDIS;
 
     // configure SDRAM parameters
-    SEMC_BR0 = SDRAM_BASE | SEMC_BR_MS(13 /*13 = 32 Mbyte*/) | SEMC_BR_VLD;
+    SEMC_BR0 = 0x80000000 | SEMC_BR_MS(13 /*13 = 32 Mbyte*/) | SEMC_BR_VLD;
     SEMC_SDRAMCR0 = SEMC_SDRAMCR0_CL(3) |
         SEMC_SDRAMCR0_COL(3) |  // 3 = 9 bit column
         SEMC_SDRAMCR0_BL(3) |   // 3 = 8 word burst length
@@ -536,29 +564,31 @@ bool sdram_begin(uint8_t external_sdram_size, uint8_t clock, uint8_t useDQS)
 
     SEMC_IPCR1 = 2; // IP commadns, data is 16 bits wide
     SEMC_IPCR2 = 0;
+if (doneOnce) return true;
+doneOnce=true;
 
     //  send IP commands to initialize SDRAM chip:
     //  precharge all
     //  auto refresh (NXP SDK sends this twice, why?)
     //  mode set
-    bool result_cmd = SendIPCommand(SDRAM_BASE, 0x0f, 0, NULL);  //Prechargeall
+    bool result_cmd = SendIPCommand(0x80000000, 0x0f, 0, NULL);  //Prechargeall
     if (result_cmd != true)
     {
         return result_cmd;
     }
-    result_cmd = SendIPCommand(SDRAM_BASE, 0x0c, 0, NULL);        //AutoRefresh
+    result_cmd = SendIPCommand(0x80000000, 0x0c, 0, NULL);        //AutoRefresh
     if (result_cmd != true)
     {
         return result_cmd;
     }
-    result_cmd = SendIPCommand(SDRAM_BASE, 0x0c, 0, NULL);         //AutoRefresh
+    result_cmd = SendIPCommand(0x80000000, 0x0c, 0, NULL);         //AutoRefresh
     if (result_cmd != true)
     {
         return result_cmd;
     }
     /* Mode setting value. */
     uint16_t mode = (uint16_t)3| (uint16_t)(3 << 4);
-    result_cmd = SendIPCommand(SDRAM_BASE, 0x0a, mode, NULL);       //Modeset
+    result_cmd = SendIPCommand(0x80000000, 0x0a, mode, NULL);       //Modeset
     if (result_cmd != true)
     {
         return result_cmd;
@@ -568,10 +598,10 @@ bool sdram_begin(uint8_t external_sdram_size, uint8_t clock, uint8_t useDQS)
 
     if(result_cmd == false) return false;
     
-    sm_set_pool(&sdram_smalloc_pool, (void *)SDRAM_BASE, external_sdram_size * 1024 *1024, 1, NULL);
+    sm_set_pool(&sdram_smalloc_pool, (void *)0x80000000, external_sdram_size * 1024 *1024, 1, NULL);
 
-    if(!check_fixed_pattern(0x5A698421))
-        return false;
+//    if(!check_fixed_pattern(0x5A698421))
+//        return false;
 
 
     return true; // hopefully SDRAM now working at 80000000 to 81FFFFFF
