@@ -210,7 +210,7 @@ struct smalloc_pool sdram_smalloc_pool;
 #endif
 
 // default = 166MHz
-#define SDRAM_CLOCK 133
+#define SDRAM_CLOCK 206
 // default base address
 #define SDRAM_BASE 0x80000000
 // default SDRAM size (in MBs)
