@@ -13,8 +13,8 @@ volatile uint32_t F_BUS_ACTUAL = 132000000;
 // The datasheet says 1600 is the absolute maximum voltage.  The hardware
 // can actually create up to 1575.  But 1300 is the recommended limit.
 //  (earlier versions of the datasheet said 1300 was the absolute max)
-#define OVERCLOCK_STEPSIZE  28000000
-#define OVERCLOCK_MAX_VOLT  1575
+#define OVERCLOCK_STEPSIZE  25000000
+#define OVERCLOCK_MAX_VOLT  1300
 
 
 uint32_t set_arm_clock(uint32_t frequency);
