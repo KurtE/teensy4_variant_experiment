@@ -219,7 +219,10 @@ struct smalloc_pool sdram_smalloc_pool;
 #define SDRAM_USEDQS 1
 
 uint8_t _size = 0;
-    
+float frequency = 0;
+
+float getFrequency() { return frequency; }
+
 unsigned int ns_to_clocks(float ns, float freq)
 {
     float clocks = ceilf(ns * 1.0e-9f * freq);
@@ -490,7 +493,7 @@ bool  check_fixed_pattern(uint32_t pattern)
 	return true;
 }
 
-bool begin(uint8_t external_sdram_size, uint8_t clock, uint8_t useDQS)
+bool sdram_begin(uint8_t external_sdram_size, uint8_t clock, uint8_t useDQS)
 {
     _size = external_sdram_size;
     uint8_t _clock = 0;
@@ -539,6 +542,7 @@ bool begin(uint8_t external_sdram_size, uint8_t clock, uint8_t useDQS)
     
     delayMicroseconds(1);
     const float freq = 664.62e6 / (float)clockdiv;
+    frequency = freq / 1.0e6f;
     CCM_CCGR3 |= CCM_CCGR3_SEMC(CCM_CCGR_ON);
     
     // software reset
@@ -661,7 +665,7 @@ bool begin(uint8_t external_sdram_size, uint8_t clock, uint8_t useDQS)
 
 void startup_middle_hook(void)
 {
-    begin(SDRAM_SIZE, SDRAM_CLOCK, SDRAM_USEDQS);
+    sdram_begin(SDRAM_SIZE, SDRAM_CLOCK, SDRAM_USEDQS);
 
 }
 
