@@ -46,9 +46,9 @@ void *sdram_realloc(void *ptr, size_t size);
 #endif
 
 
-#define CORE_NUM_TOTAL_PINS    	69
-#define CORE_NUM_DIGITAL    	69
-#define CORE_NUM_INTERRUPT    	69
+#define CORE_NUM_TOTAL_PINS    	70
+#define CORE_NUM_DIGITAL    	70
+#define CORE_NUM_INTERRUPT    	70
 #define CORE_NUM_ANALOG        14
 #define CORE_NUM_PWM        30
 
